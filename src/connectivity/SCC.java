@@ -19,11 +19,13 @@ public final class SCC {
         }
     }
 
+
     public static Result compute(Graph g, Counters c) {
         if (!g.directed()) {
             throw new IllegalArgumentException("SCC needs a directed graph");
         }
         int n = g.n();
+
 
         boolean[] visited = new boolean[n];
         int[] next = new int[n];
@@ -63,6 +65,32 @@ public final class SCC {
             rev.get(e.to()).add(e.from());
         }
 
-        return new Result(0, new int[n], new ArrayList<>());
+        int[] comp = new int[n];
+        java.util.Arrays.fill(comp, -1);
+        List<List<Integer>> components = new ArrayList<>();
+        for (int i = n - 1; i >= 0; i--) {
+            int s = finish[i];
+            if (comp[s] != -1) {
+                continue;
+            }
+            int id = components.size();
+            List<Integer> members = new ArrayList<>();
+            int sp = 0;
+            stack[sp++] = s;
+            comp[s] = id;
+            while (sp > 0) {
+                int v = stack[--sp];
+                members.add(v);
+                for (int u : rev.get(v)) {
+                    c.edgeExams++;
+                    if (comp[u] == -1) {
+                        comp[u] = id;
+                        stack[sp++] = u;
+                    }
+                }
+            }
+            components.add(members);
+        }
+        return new Result(components.size(), comp, components);
     }
 }
