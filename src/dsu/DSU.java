@@ -25,4 +25,21 @@ public final class DSU {
             parent[i] = i;
         }
     }
+
+    public int find(int x) {
+        c.dsuFind++;
+        int root = x;
+        while (parent[root] != root) {
+            root = parent[root];
+            c.dsuParentSteps++;
+        }
+        if (compress) {
+            while (parent[x] != root) {
+                int next = parent[x];
+                parent[x] = root;
+                x = next;
+            }
+        }
+        return root;
+    }
 }
