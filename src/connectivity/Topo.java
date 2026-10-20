@@ -45,6 +45,15 @@ public final class Topo {
             }
         }
 
-        return new Result(order.size() == n, order, List.of());
+        if (order.size() == n) {
+            return new Result(true, order, List.of());
+        }
+        List<Integer> stuck = new ArrayList<>();
+        for (int v = 0; v < n; v++) {
+            if (indeg[v] > 0) {
+                stuck.add(v);
+            }
+        }
+        return new Result(false, order, stuck);
     }
 }
