@@ -1,6 +1,9 @@
 package graph;
 
+import connectivity.Topo;
+
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public final class Graph {
@@ -31,5 +34,25 @@ public final class Graph {
         if (!directed && u != v) {
             adj.get(v).add(new Edge(v, u, w));
         }
+    }
+
+    public int n() {
+        return n;
+    }
+
+    public boolean directed() {
+        return directed;
+    }
+
+    public int edgeCount() {
+        return edges.size();
+    }
+
+    public List<Edge> edges() {
+        return Collections.unmodifiableList(edges);
+    }
+
+    public List<Edge> adj(int v) {
+        return adj.get(v);
     }
 }
