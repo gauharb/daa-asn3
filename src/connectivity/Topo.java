@@ -56,4 +56,26 @@ public final class Topo {
         }
         return new Result(false, order, stuck);
     }
+
+    public static boolean isValidOrder(Graph g, List<Integer> order) {
+        int n = g.n();
+        if (order.size() != n) {
+            return false;
+        }
+        int[] pos = new int[n];
+        java.util.Arrays.fill(pos, -1);
+        for (int i = 0; i < n; i++) {
+            int v = order.get(i);
+            if (v < 0 || v >= n || pos[v] != -1) {
+                return false;
+            }
+            pos[v] = i;
+        }
+        for (Edge e : g.edges()) {
+            if (pos[e.from()] >= pos[e.to()]) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
