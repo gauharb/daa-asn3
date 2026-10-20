@@ -20,4 +20,16 @@ public final class Graph {
             adj.add(new ArrayList<>());
         }
     }
+
+    public void addEdge(int u, int v, int w) {
+        if (u < 0 || u >= n || v < 0 || v >= n) {
+            throw new IllegalArgumentException("vertex out of range: " + u + "," + v);
+        }
+        Edge e = new Edge(u, v, w);
+        edges.add(e);
+        adj.get(u).add(e);
+        if (!directed && u != v) {
+            adj.get(v).add(new Edge(v, u, w));
+        }
+    }
 }
