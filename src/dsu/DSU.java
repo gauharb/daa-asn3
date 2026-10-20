@@ -42,4 +42,28 @@ public final class DSU {
         }
         return root;
     }
+
+    public boolean union(int a, int b) {
+        int ra = find(a);
+        int rb = find(b);
+        if (ra == rb) {
+            return false;
+        }
+        c.dsuUnion++;
+        if (byRank) {
+            if (rank[ra] < rank[rb]) {
+                int t = ra;
+                ra = rb;
+                rb = t;
+            }
+            parent[rb] = ra;
+            if (rank[ra] == rank[rb]) {
+                rank[ra]++;
+            }
+        } else {
+            parent[rb] = ra;
+        }
+        components--;
+        return true;
+    }
 }
