@@ -10,4 +10,10 @@ public final class MST {
 
     public record Result(long totalWeight, List<Edge> edges, boolean connected, int components) {
     }
+
+    private static void requireUndirected(Graph g) {
+        if (g.directed()) {
+            throw new IllegalArgumentException("MST needs an undirected graph");
+        }
+    }
 }
