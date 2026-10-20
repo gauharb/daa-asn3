@@ -66,4 +66,12 @@ public final class DSU {
         components--;
         return true;
     }
+
+    public boolean connected(int a, int b) {
+        return find(a) == find(b);
+    }
+
+    public int components() {
+        return components;
+    }
 }
