@@ -46,6 +46,14 @@ public final class Dijkstra {
             throw new IllegalArgumentException("source out of range");
         }
 
+        for (Edge e : g.edges()) {
+            if (e.weight() < 0) {
+                throw new IllegalArgumentException(
+                        "Dijkstra requires non-negative weights, found " + e.weight()
+                                + " on edge " + e.from() + "->" + e.to());
+            }
+        }
+
         int n = g.n();
         long[] dist = new long[n];
         int[] parent = new int[n];
