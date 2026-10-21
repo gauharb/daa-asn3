@@ -1,6 +1,7 @@
 import graph.*;
 import dsu.DSU;
 import mst.MST;
+import connectivity.*;
 
 import java.util.List;
 
@@ -41,6 +42,7 @@ public final class Tests {
     public static void main(String[] args) {
         dsuTests();
         mstTests();
+        topoTests();
         System.out.println();
         System.out.println("Passed: " + passed + "  Failed: " + failed);
         System.exit(failed == 0 ? 0 : 1);
@@ -170,5 +172,50 @@ public final class Tests {
             bigMatch &= MST.kruskal(g, cn()).totalWeight() == MST.prim(g, cn()).totalWeight();
         }
         check(bigMatch, "10 graphs with V=500, E=2500: Kruskal weight == Prim weight");
+    }
+
+    private static void topoTests() {
+        System.out.println("[Topological ordering]");
+        Graph dag = directed(6, new int[][] {{5, 2}, {5, 0}, {4, 0}, {4, 1}, {2, 3}, {3, 1}});
+        Topo.Result r = Topo.sort(dag, cn());
+        check(r.isDag() && Topo.isValidOrder(dag, r.order()), "known DAG: valid order");
+
+        Graph tri = directed(3, new int[][] {{0, 1}, {1, 2}, {2, 0}});
+        Topo.Result rc = Topo.sort(tri, cn());
+        check(!rc.isDag() && rc.stuck().size() == 3, "3-cycle: topological order impossible, 3 stuck vertices");
+
+        Graph self = directed(2, new int[][] {{0, 0}, {0, 1}});
+        check(!Topo.sort(self, cn()).isDag(), "self loop is a cycle");
+
+        Graph partial = directed(5, new int[][] {{0, 1}, {1, 2}, {2, 1}, {2, 3}, {3, 4}});
+        Topo.Result rp = Topo.sort(partial, cn());
+        check(!rp.isDag() && rp.order().equals(List.of(0)), "cycle in a subgraph: only vertex 0 can be ordered");
+
+        boolean allValid = true;
+        boolean allDagFlag = true;
+        boolean cyclicDetected = true;
+        for (int t = 0; t < 200; t++) {
+            int n = 2 + t % 30;
+            int maxM = n * (n - 1) / 2;
+            int m = Math.min(maxM, (t * 7) % (3 * n));
+            Graph g = GraphGenerator.directedDag(n, m, 500 + t, 10);
+            Topo.Result res = Topo.sort(g, cn());
+            allDagFlag &= res.isDag();
+            allValid &= res.isDag() && Topo.isValidOrder(g, res.order());
+            if (m >= 1) {
+
+                Edge e = g.edges().get(0);
+                g.addEdge(e.to(), e.from(), 1);
+                cyclicDetected &= !Topo.sort(g, cn()).isDag();
+            }
+        }
+        check(allDagFlag, "200 random DAGs all reported acyclic");
+        check(allValid, "200 random DAGs: order valid for every edge, every vertex exactly once");
+        check(cyclicDetected, "200 random DAGs + one back edge: cycle detected every time");
+
+        Graph big = GraphGenerator.directedDag(1000, 5000, 42, 100);
+        check(Topo.isValidOrder(big, Topo.sort(big, cn()).order()), "V=1000, E=5000 DAG: valid order");
+        Graph cyclic = GraphGenerator.directedCyclic(1000, 5000, 42, 100);
+        check(!Topo.sort(cyclic, cn()).isDag(), "V=1000, E=5000 cyclic graph: detected");
     }
 }
