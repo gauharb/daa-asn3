@@ -33,6 +33,50 @@ public final class GraphGenerator {
         return g;
     }
 
+    public static Graph directedDag(int n, int m, long seed, int maxW) {
+        if (m > (long) n * (n - 1) / 2) {
+            throw new IllegalArgumentException("a DAG on n vertices has at most n(n-1)/2 edges");
+        }
+        Random r = new Random(seed);
+        int[] perm = shuffled(n, r);
+        int[] rank = new int[n];
+        for (int i = 0; i < n; i++) {
+            rank[perm[i]] = i;
+        }
+        Graph g = new Graph(n, true);
+        Set<Long> used = new HashSet<>();
+        while (g.edgeCount() < m) {
+            int a = r.nextInt(n);
+            int b = r.nextInt(n);
+            if (a == b) {
+                continue;
+            }
+            int u = rank[a] < rank[b] ? a : b;
+            int v = u == a ? b : a;
+            if (used.add(key(u, v, n, true))) {
+                g.addEdge(u, v, 1 + r.nextInt(maxW));
+            }
+        }
+        return g;
+    }
+
+    public static Graph directedRandom(int n, int m, long seed, int maxW) {
+        if (m > (long) n * (n - 1)) {
+            throw new IllegalArgumentException("m exceeds n(n-1)");
+        }
+        Random r = new Random(seed);
+        Graph g = new Graph(n, true);
+        Set<Long> used = new HashSet<>();
+        while (g.edgeCount() < m) {
+            int u = r.nextInt(n);
+            int v = r.nextInt(n);
+            if (u != v && used.add(key(u, v, n, true))) {
+                g.addEdge(u, v, 1 + r.nextInt(maxW));
+            }
+        }
+        return g;
+    }
+
     private static int[] shuffled(int n, Random r) {
         int[] p = new int[n];
         for (int i = 0; i < n; i++) {
