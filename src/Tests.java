@@ -3,7 +3,9 @@ import dsu.DSU;
 import mst.MST;
 import connectivity.*;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public final class Tests {
     private static int passed;
@@ -43,6 +45,7 @@ public final class Tests {
         dsuTests();
         mstTests();
         topoTests();
+        sccTests();
         System.out.println();
         System.out.println("Passed: " + passed + "  Failed: " + failed);
         System.exit(failed == 0 ? 0 : 1);
@@ -217,5 +220,80 @@ public final class Tests {
         check(Topo.isValidOrder(big, Topo.sort(big, cn()).order()), "V=1000, E=5000 DAG: valid order");
         Graph cyclic = GraphGenerator.directedCyclic(1000, 5000, 42, 100);
         check(!Topo.sort(cyclic, cn()).isDag(), "V=1000, E=5000 cyclic graph: detected");
+    }
+
+    private static void sccTests() {
+        System.out.println("[SCC]");
+        Graph g = directed(8, new int[][] {{0, 1}, {1, 2}, {2, 0}, {2, 3}, {3, 4}, {4, 5}, {5, 3}, {6, 5}, {6, 7}, {7, 6}});
+        SCC.Result r = SCC.compute(g, cn());
+        Set<Set<Integer>> got = new HashSet<>();
+        for (List<Integer> c : r.components()) {
+            got.add(new HashSet<>(c));
+        }
+        Set<Set<Integer>> want = Set.of(Set.of(0, 1, 2), Set.of(3, 4, 5), Set.of(6, 7));
+        check(r.count() == 3 && got.equals(want), "known graph: components {0,1,2} {3,4,5} {6,7}");
+
+        Graph dag = directed(5, new int[][] {{0, 1}, {1, 2}, {0, 3}, {3, 4}});
+        check(SCC.compute(dag, cn()).count() == 5, "DAG: every vertex is its own SCC");
+        Graph ring = directed(6, new int[][] {{0, 1}, {1, 2}, {2, 3}, {3, 4}, {4, 5}, {5, 0}});
+        check(SCC.compute(ring, cn()).count() == 1, "ring: one SCC");
+
+        boolean exactlyOne = true;
+        boolean matchesReach = true;
+        for (int t = 0; t < 300; t++) {
+            int n = 1 + t % 8;
+            int m = n == 1 ? 0 : (t * 3) % Math.min(n * (n - 1), 14);
+            Graph rg = GraphGenerator.directedRandom(n, m, 9000 + t, 5);
+            SCC.Result res = SCC.compute(rg, cn());
+            int[] seen = new int[n];
+            int total = 0;
+            for (List<Integer> comp : res.components()) {
+                total += comp.size();
+                for (int v : comp) {
+                    seen[v]++;
+                }
+            }
+            exactlyOne &= total == n;
+            for (int v = 0; v < n; v++) {
+                exactlyOne &= seen[v] == 1 && res.componentOf()[v] >= 0;
+            }
+
+            boolean[][] reach = new boolean[n][n];
+            for (int i = 0; i < n; i++) {
+                reach[i][i] = true;
+            }
+            for (Edge e : rg.edges()) {
+                reach[e.from()][e.to()] = true;
+            }
+            for (int k = 0; k < n; k++) {
+                for (int i = 0; i < n; i++) {
+                    for (int j = 0; j < n; j++) {
+                        reach[i][j] |= reach[i][k] && reach[k][j];
+                    }
+                }
+            }
+            for (int u = 0; u < n; u++) {
+                for (int v = 0; v < n; v++) {
+                    boolean same = res.componentOf()[u] == res.componentOf()[v];
+                    matchesReach &= same == (reach[u][v] && reach[v][u]);
+                }
+            }
+        }
+        check(exactlyOne, "300 random graphs: every vertex belongs to exactly one SCC");
+        check(matchesReach, "300 random graphs: same SCC <=> mutually reachable (Floyd-Warshall)");
+
+        Graph big = GraphGenerator.directedCyclic(1000, 5000, 42, 100);
+        SCC.Result br = SCC.compute(big, cn());
+        int sum = 0;
+        for (List<Integer> comp : br.components()) {
+            sum += comp.size();
+        }
+        check(sum == 1000, "V=1000, E=5000: component sizes add up to V");
+
+        Graph chain = new Graph(200_000, true);
+        for (int i = 0; i + 1 < 200_000; i++) {
+            chain.addEdge(i, i + 1, 1);
+        }
+        check(SCC.compute(chain, cn()).count() == 200_000, "200000-vertex chain: no stack overflow, all singletons");
     }
 }
