@@ -50,6 +50,7 @@ public final class Tests {
         topoTests();
         sccTests();
         dijkstraTests();
+        singleVertexTests();
         System.out.println();
         System.out.println("Passed: " + passed + "  Failed: " + failed);
         System.exit(failed == 0 ? 0 : 1);
@@ -391,5 +392,20 @@ public final class Tests {
             undirMatch &= Arrays.equals(Dijkstra.run(ug, 0, cn()).dist(), bellmanFord(ug, 0));
         }
         check(undirMatch, "50 undirected connected graphs: distances equal Bellman-Ford");
+    }
+
+    private static void singleVertexTests() {
+        System.out.println("[Single vertex]");
+        Graph u = new Graph(1, false);
+        MST.Result k = MST.kruskal(u, cn());
+        MST.Result p = MST.prim(u, cn());
+        check(k.totalWeight() == 0 && k.connected() && k.edges().isEmpty(), "Kruskal: weight 0, connected");
+        check(p.totalWeight() == 0 && p.connected() && p.edges().isEmpty(), "Prim: weight 0, connected");
+        Graph d = new Graph(1, true);
+        Topo.Result t = Topo.sort(d, cn());
+        check(t.isDag() && t.order().equals(List.of(0)), "topological order of one vertex is [0]");
+        check(SCC.compute(d, cn()).count() == 1, "one vertex: one SCC");
+        Dijkstra.Result r = Dijkstra.run(d, 0, cn());
+        check(r.dist()[0] == 0 && r.pathTo(0).equals(List.of(0)), "Dijkstra: distance 0, path [0]");
     }
 }
