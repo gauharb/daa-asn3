@@ -1,5 +1,6 @@
 import graph.*;
 import mst.MST;
+import connectivity.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +23,7 @@ public final class Main {
     }
 
     public static void main(String[] args) {
+
         System.out.println("=== 1. Infrastructure planning: minimum-cost road network (undirected) ===");
         Graph roads = new Graph(7, false);
         int[][] r = {
@@ -38,6 +40,34 @@ public final class Main {
                 + (k.totalWeight() == p.totalWeight() ? "  (equal)" : "  (MISMATCH)"));
         for (Edge e : k.edges()) {
             System.out.println("  build " + name(e.from()) + " - " + name(e.to()) + " (cost " + e.weight() + ")");
+        }
+
+        System.out.println();
+
+        System.out.println("=== 2a. Service dependencies (must be DAG) ===");
+        Graph deps = new Graph(7, true);
+
+        int[][] d = {{0, 1}, {0, 2}, {1, 4}, {2, 4}, {4, 3}, {4, 6}, {3, 5}};
+        for (int[] e : d) {
+            deps.addEdge(e[0], e[1], 1);
+        }
+        Topo.Result t = Topo.sort(deps, new Counters());
+        System.out.println("DAG: " + t.isDag() + "; build order: " + path(t.order()));
+        deps.addEdge(5, 0, 1);
+        Topo.Result bad = Topo.sort(deps, new Counters());
+        System.out.println("After adding OldTown -> Downtown: DAG = " + bad.isDag()
+                + "; on the cycle or depending on it: " + path(bad.stuck()));
+
+        System.out.println();
+        System.out.println("=== 2b. One-way streets: strongly connected components ===");
+        SCC.Result scc = SCC.compute(deps, new Counters());
+        System.out.println("Number of SCCs: " + scc.count());
+        for (List<Integer> comp : scc.components()) {
+            List<String> names = new ArrayList<>();
+            for (int v : comp) {
+                names.add(name(v));
+            }
+            System.out.println("  " + names);
         }
     }
 }
