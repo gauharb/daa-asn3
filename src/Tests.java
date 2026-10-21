@@ -2,7 +2,10 @@ import graph.*;
 import dsu.DSU;
 import mst.MST;
 import connectivity.*;
+import shortestpath.Dijkstra;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -46,6 +49,7 @@ public final class Tests {
         mstTests();
         topoTests();
         sccTests();
+        dijkstraTests();
         System.out.println();
         System.out.println("Passed: " + passed + "  Failed: " + failed);
         System.exit(failed == 0 ? 0 : 1);
@@ -257,7 +261,6 @@ public final class Tests {
             for (int v = 0; v < n; v++) {
                 exactlyOne &= seen[v] == 1 && res.componentOf()[v] >= 0;
             }
-
             boolean[][] reach = new boolean[n][n];
             for (int i = 0; i < n; i++) {
                 reach[i][i] = true;
@@ -295,5 +298,98 @@ public final class Tests {
             chain.addEdge(i, i + 1, 1);
         }
         check(SCC.compute(chain, cn()).count() == 200_000, "200000-vertex chain: no stack overflow, all singletons");
+    }
+
+    private static long[] bellmanFord(Graph g, int s) {
+        long[] d = new long[g.n()];
+        Arrays.fill(d, Dijkstra.INF);
+        d[s] = 0;
+        for (int i = 0; i < g.n(); i++) {
+            for (Edge e : g.edges()) {
+                if (d[e.from()] != Dijkstra.INF && d[e.from()] + e.weight() < d[e.to()]) {
+                    d[e.to()] = d[e.from()] + e.weight();
+                }
+                if (!g.directed() && d[e.to()] != Dijkstra.INF && d[e.to()] + e.weight() < d[e.from()]) {
+                    d[e.from()] = d[e.to()] + e.weight();
+                }
+            }
+        }
+        return d;
+    }
+
+    private static boolean pathCostMatches(Graph g, Dijkstra.Result r, int t) {
+        List<Integer> p = r.pathTo(t);
+        if (!r.reachable(t)) {
+            return p.isEmpty();
+        }
+        if (p.get(0) != r.source() || p.get(p.size() - 1) != t) {
+            return false;
+        }
+        long cost = 0;
+        for (int i = 0; i + 1 < p.size(); i++) {
+            long best = Long.MAX_VALUE;
+            for (Edge e : g.adj(p.get(i))) {
+                if (e.to() == p.get(i + 1)) {
+                    best = Math.min(best, e.weight());
+                }
+            }
+            if (best == Long.MAX_VALUE) {
+                return false;
+            }
+            cost += best;
+        }
+        return cost == r.dist()[t];
+    }
+
+    private static void dijkstraTests() {
+        System.out.println("[Dijkstra]");
+        Graph g = directed(5, new int[][] {{0, 1, 4}, {0, 2, 1}, {2, 1, 2}, {1, 3, 1}, {2, 3, 5}});
+        Dijkstra.Result r = Dijkstra.run(g, 0, cn());
+        check(r.dist()[0] == 0 && r.dist()[1] == 3 && r.dist()[2] == 1 && r.dist()[3] == 4,
+                "known graph: distances 0,3,1,4");
+        check(r.pathTo(3).equals(List.of(0, 2, 1, 3)), "known graph: path to 3 is 0-2-1-3");
+        check(!r.reachable(4) && r.dist()[4] == Dijkstra.INF && r.pathTo(4).isEmpty(),
+                "unreachable vertex: INF distance and empty path");
+        check(r.reachableCount() == 4, "reachable count is 4");
+
+        Graph zero = directed(3, new int[][] {{0, 1, 0}, {1, 2, 0}});
+        check(Dijkstra.run(zero, 0, cn()).dist()[2] == 0, "zero-weight edges handled");
+
+        Graph dup = directed(4, new int[][] {{0, 1, 2}, {0, 2, 2}, {1, 3, 2}, {2, 3, 2}});
+        Dijkstra.Result dr = Dijkstra.run(dup, 0, cn());
+        check(dr.dist()[3] == 4 && pathCostMatches(dup, dr, 3), "duplicate weights (two equal shortest paths)");
+
+        Graph neg = directed(3, new int[][] {{0, 1, 2}, {0, 2, 5}, {2, 1, -4}});
+        boolean threw = false;
+        try {
+            Dijkstra.run(neg, 0, cn());
+        } catch (IllegalArgumentException ex) {
+            threw = true;
+        }
+        check(threw, "negative edge weight rejected");
+        check(bellmanFord(neg, 0)[1] == 1, "(for the report) true distance with the negative edge is 1, not 2");
+
+        boolean allMatch = true;
+        boolean allPaths = true;
+        for (int t = 0; t < 300; t++) {
+            int n = 1 + t % 40;
+            int m = n == 1 ? 0 : (t * 5) % Math.min(n * (n - 1), 4 * n);
+            Graph rg = GraphGenerator.directedRandom(n, m, 3000 + t, 6);
+            Dijkstra.Result res = Dijkstra.run(rg, t % n, cn());
+            long[] ref = bellmanFord(rg, t % n);
+            allMatch &= Arrays.equals(res.dist(), ref);
+            for (int v = 0; v < n; v++) {
+                allPaths &= pathCostMatches(rg, res, v);
+            }
+        }
+        check(allMatch, "300 random directed graphs: distances equal Bellman-Ford");
+        check(allPaths, "300 random directed graphs: reconstructed path cost equals distance");
+
+        boolean undirMatch = true;
+        for (int t = 0; t < 50; t++) {
+            Graph ug = GraphGenerator.undirectedConnected(30, 80, 77 + t, 20);
+            undirMatch &= Arrays.equals(Dijkstra.run(ug, 0, cn()).dist(), bellmanFord(ug, 0));
+        }
+        check(undirMatch, "50 undirected connected graphs: distances equal Bellman-Ford");
     }
 }
