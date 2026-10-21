@@ -1,9 +1,10 @@
 package graph;
 
+import connectivity.Topo;
+
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
-
 
 public final class GraphGenerator {
     private GraphGenerator() {
@@ -75,6 +76,16 @@ public final class GraphGenerator {
             }
         }
         return g;
+    }
+
+    public static Graph directedCyclic(int n, int m, long seed, int maxW) {
+        for (int attempt = 0; attempt < 1000; attempt++) {
+            Graph g = directedRandom(n, m, seed + attempt, maxW);
+            if (!Topo.sort(g, new Counters()).isDag()) {
+                return g;
+            }
+        }
+        throw new IllegalStateException("could not generate a cyclic graph with these parameters");
     }
 
     private static int[] shuffled(int n, Random r) {
